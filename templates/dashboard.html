@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Permisos - Municipio de Guadalupe</title>
+
+    <!-- Google Fonts & Bootstrap -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f6f9;
+        }
+        .custom-navbar {
+            background-color: #003366;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            z-index: 1030;
+        }
+        .navbar-brand,
+        .navbar-nav .nav-link,
+        .btn-outline-light {
+            color: white !important;
+        }
+        .navbar-brand img {
+            margin-right: 10px;
+        }
+        .custom-header {
+            background-color: #003366;
+            color: white;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .form-control, .btn {
+            border-radius: 0;
+        }
+        .table th,
+        .table td {
+            padding: 6px 10px !important;
+            font-size: 13px !important;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .table thead {
+            background-color: #eaeaea;
+        }
+        .footer {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            margin-top: 40px;
+        }
+        #loadingSpinner {
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg sticky-top custom-navbar">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="/dashboard">
+            <img src="{{ url_for('static', filename='logo.jpg') }}" height="40" alt="Logo">
+            Municipio de Guadalupe
+        </a>
+        <div class="ml-auto">
+            <a href="/logout" class="btn btn-outline-light">Cerrar sesión</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Header -->
+<div class="container">
+    <div class="custom-header mt-4">
+        <h3>Portal de Consulta de Permisos</h3>
+        <p>Consulta la información de permisos autorizados por el municipio.</p>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="container mt-4">
+    <form method="get" action="/dashboard" class="form-row mb-4 align-items-end justify-content-between">
+        <div class="col-md-3">
+            <select name="localidad" class="form-control">
+                <option value="">Localidad</option>
+                <option value="local" {% if request.args.get('localidad') == 'local' %}selected{% endif %}>Local</option>
+                <option value="foraneos" {% if request.args.get('localidad') == 'foraneos' %}selected{% endif %}>Foráneos</option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="mes" class="form-control">
+                <option value="">Mes</option>
+                {% for i in range(1, 13) %}
+                    <option value="{{ i }}" {% if request.args.get('mes') == i|string %}selected{% endif %}>{{ i }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="col-md-4 ml-auto d-flex">
+            <input type="text" name="search" id="searchInput" class="form-control" placeholder="Buscar..." value="{{ request.args.get('search', '') }}">
+            <button class="btn btn-primary ml-2">Buscar</button>
+        </div>
+    </form>
+</div>
+
+<!-- Spinner -->
+<div id="loadingSpinner" class="text-center my-3">
+    <div class="spinner-border text-primary" role="status">
+        <span class="sr-only">Cargando...</span>
+    </div>
+</div>
+
+<!-- Data Table -->
+<div class="container mt-2">
+    <div id="tableContainer">
+        <table class="table table-bordered table-hover table-striped">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    {% for col in columns %}
+                        <th>{{ col }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in data %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    {% for item in row %}
+                        <td>{{ item }}</td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Footer -->
+<div class="footer container">
+    &copy; {{ 2025 }} Municipio de Guadalupe | Departamento de Transporte y Movilidad
+</div>
+
+<!-- JavaScript -->
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const searchInput = document.getElementById("searchInput");
+        const localidadSelect = document.querySelector('select[name="localidad"]');
+        const mesSelect = document.querySelector('select[name="mes"]');
+        const tableContainer = document.getElementById("tableContainer");
+        const spinner = document.getElementById("loadingSpinner");
+    
+        function fetchFilteredData() {
+            const params = new URLSearchParams({
+                search: searchInput.value,
+                localidad: localidadSelect.value,
+                mes: mesSelect.value
+            });
+    
+            spinner.style.display = "block";
+    
+            fetch(`/dashboard-live?${params.toString()}`)
+                .then(response => response.text())
+                .then(html => {
+                    tableContainer.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error("Error loading table:", error);
+                })
+                .finally(() => {
+                    spinner.style.display = "none";
+                });
+        }
+    
+        searchInput.addEventListener("input", fetchFilteredData);
+        localidadSelect.addEventListener("change", fetchFilteredData);
+        mesSelect.addEventListener("change", fetchFilteredData);
+    });
+    </script>
+    
+
+</body>
+</html>
