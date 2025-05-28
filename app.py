@@ -2,8 +2,13 @@ from flask import Flask, render_template, request, redirect, url_for, session, r
 import mysql.connector
 import os
 from dotenv import load_dotenv
+import json
+from datetime import datetime
+from dateutil.relativedelta import relativedelta 
 
 load_dotenv()
+
+USERS = json.loads(os.getenv("USERS_JSON", "{}"))
 
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY") or "this_is_secret"
@@ -22,13 +27,7 @@ def login():
         username = request.form["username"]
         password = request.form["password"]
 
-        # Dummy role-based check
-        users = {
-            "admin": {"password": "Guadalupe2024", "role": "admin"},
-            "Vialidad": {"password": "20242027", "role": "staff"},
-            "permisosjuarez": {"password": "2024", "role": "viewer"}
-        }
-        user = users.get(username)
+        user = USERS.get(username)
         if user and user["password"] == password:
             session["logged_in"] = True
             session["role"] = user["role"]
@@ -68,12 +67,11 @@ def dashboard():
                 `CAPACIDAD` LIKE %s OR
                 `SERIE` LIKE %s OR
                 `COLOR` LIKE %s OR
-                `PUERTAS` LIKE %s OR
                 `NOMBRE` LIKE %s OR
                 `LOCALIDAD` LIKE %s
             )
         """
-        params += [like] * 10
+        params += [like] * 9
 
     if localidad:
         query += " AND `LOCALIDAD` = %s"
@@ -87,12 +85,38 @@ def dashboard():
     cursor = conn.cursor()
     cursor.execute(query, params)
     data = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description if desc[0] != 'fecha_real']
-    data = [tuple(val for i, val in enumerate(row) if cursor.description[i][0] != 'fecha_real') for row in data]
+    raw_column_names = [desc[0] for desc in cursor.description]
+    column_names = [col for col in raw_column_names if col != "fecha_real" and col != "PUERTAS"]
+
+    
+    if "ï»¿FECHA" in column_names:
+        insert_index = column_names.index("ï»¿FECHA") + 1
+        column_names.insert(insert_index, "VENCE")
+
+    final_data = []
+    for row in data:
+        row_dict = dict(zip(raw_column_names, row))
+        fecha_val = row_dict.get("ï»¿FECHA")
+        try:
+            fecha_dt = datetime.strptime(fecha_val, "%m/%d/%Y")
+            vence_dt = fecha_dt + relativedelta(months=1)  
+            vence_str = vence_dt.strftime("%m/%d/%Y")
+        except Exception:
+            vence_str = ""
+
+        row_list = []
+        for col in raw_column_names:
+            if col == "PUERTAS" or col == "fecha_real":
+                continue
+            row_list.append(row_dict[col])
+            if col == "ï»¿FECHA":
+                row_list.append(vence_str)
+        final_data.append(tuple(row_list))
+
     cursor.close()
     conn.close()
 
-    return render_template("dashboard.html", data=data, columns=column_names, request=request)
+    return render_template("dashboard.html", data=final_data, columns=column_names, request=request)
 
 @app.route("/dashboard-live")
 def dashboard_live():
@@ -123,12 +147,11 @@ def dashboard_live():
                 `CAPACIDAD` LIKE %s OR
                 `SERIE` LIKE %s OR
                 `COLOR` LIKE %s OR
-                `PUERTAS` LIKE %s OR
                 `NOMBRE` LIKE %s OR
                 `LOCALIDAD` LIKE %s
             )
         """
-        params += [like] * 10
+        params += [like] * 9
 
     if localidad:
         query += " AND `LOCALIDAD` = %s"
@@ -142,13 +165,39 @@ def dashboard_live():
     cursor = conn.cursor()
     cursor.execute(query, params)
     data = cursor.fetchall()
-    column_names = [desc[0] for desc in cursor.description if desc[0] != 'fecha_real']
-    data = [tuple(val for i, val in enumerate(row) if cursor.description[i][0] != 'fecha_real') for row in data]
+    raw_column_names = [desc[0] for desc in cursor.description]
+    column_names = [col for col in raw_column_names if col != "fecha_real" and col != "PUERTAS"]
+
+    
+    if "ï»¿FECHA" in column_names:
+        insert_index = column_names.index("ï»¿FECHA") + 1
+        column_names.insert(insert_index, "VENCE")
+
+    final_data = []
+    for row in data:
+        row_dict = dict(zip(raw_column_names, row))
+        fecha_val = row_dict.get("ï»¿FECHA")
+        try:
+            fecha_dt = datetime.strptime(fecha_val, "%m/%d/%Y")
+            vence_dt = fecha_dt + relativedelta(months=1)  
+            vence_str = vence_dt.strftime("%m/%d/%Y")
+        except Exception:
+            vence_str = ""
+
+        row_list = []
+        for col in raw_column_names:
+            if col == "PUERTAS" or col == "fecha_real":
+                continue
+            row_list.append(row_dict[col])
+            if col == "ï»¿FECHA":
+                row_list.append(vence_str)
+        final_data.append(tuple(row_list))
+
     cursor.close()
     conn.close()
 
     html = render_template_string("""
-    <table class=\"table table-bordered table-hover table-striped\">
+    <table class="table table-bordered table-hover table-striped">
         <thead>
             <tr>
                 <th>#</th>
@@ -168,7 +217,7 @@ def dashboard_live():
             {% endfor %}
         </tbody>
     </table>
-    """, data=data, columns=column_names)
+    """, data=final_data, columns=column_names)
 
     return html
 
