@@ -154,16 +154,25 @@
         const mesSelect = document.querySelector('select[name="mes"]');
         const tableContainer = document.getElementById("tableContainer");
         const spinner = document.getElementById("loadingSpinner");
-    
+
+        // Debounce function: waits `delay` ms after the last call before running
+        function debounce(fn, delay) {
+            let timeoutID;
+            return function (...args) {
+                clearTimeout(timeoutID);
+                timeoutID = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+
         function fetchFilteredData() {
             const params = new URLSearchParams({
                 search: searchInput.value,
                 localidad: localidadSelect.value,
                 mes: mesSelect.value
             });
-    
+
             spinner.style.display = "block";
-    
+
             fetch(`/dashboard-live?${params.toString()}`)
                 .then(response => response.text())
                 .then(html => {
@@ -176,13 +185,16 @@
                     spinner.style.display = "none";
                 });
         }
-    
-        searchInput.addEventListener("input", fetchFilteredData);
-        localidadSelect.addEventListener("change", fetchFilteredData);
-        mesSelect.addEventListener("change", fetchFilteredData);
+
+        // Wrap fetchFilteredData in debounce with 300ms delay
+        const debouncedFetch = debounce(fetchFilteredData, 300);
+
+        // Use debounced fetch on input and change events
+        searchInput.addEventListener("input", debouncedFetch);
+        localidadSelect.addEventListener("change", debouncedFetch);
+        mesSelect.addEventListener("change", debouncedFetch);
     });
-    </script>
-    
+</script>
 
 </body>
 </html>
