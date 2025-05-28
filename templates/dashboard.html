@@ -187,7 +187,7 @@
         }
 
         // Wrap fetchFilteredData in debounce with 600ms delay
-        const debouncedFetch = debounce(fetchFilteredData, 300);
+        const debouncedFetch = debounce(fetchFilteredData, 600);
 
         // Use debounced fetch on input and change events
         searchInput.addEventListener("input", debouncedFetch);
