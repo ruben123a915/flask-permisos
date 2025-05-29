@@ -1,1 +1,19 @@
 .env
+# Python cache and bytecode
+__pycache__/
+*.pyc
+
+# Excel and CSV files
+*.xlsx
+*.xls
+*.csv
+
+# Databases
+*.sqlite3
+*.db
+
+# VS Code settings (optional)
+.vscode/
+
+# Flask instance folder (if used)
+instance/

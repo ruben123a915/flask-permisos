@@ -69,8 +69,11 @@
             <img src="{{ url_for('static', filename='logo.jpg') }}" height="40" alt="Logo">
             Municipio de Guadalupe
         </a>
-        <div class="ml-auto">
-            <a href="/logout" class="btn btn-outline-light">Cerrar sesión</a>
+        <div class="ml-auto d-flex align-items-center gap-2">
+            {% if session.role == 'admin' %}
+              <a href="{{ url_for('upload_excel') }}" class="btn btn-primary btn-sm">Upload Excel</a>
+            {% endif %}
+            <a href="/logout" class="btn btn-outline-light btn-sm">Cerrar sesión</a>
         </div>
     </div>
 </nav>

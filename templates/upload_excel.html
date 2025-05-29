@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <title>Subir archivo Excel</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+</head>
+<body class="container mt-5">
+
+<h2>Subir archivo Excel</h2>
+
+<form method="POST" enctype="multipart/form-data">
+    <div class="form-group">
+        <input type="file" name="file" accept=".xls,.xlsx" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Subir</button>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Cancelar</a>
+</form>
+
+{% with messages = get_flashed_messages() %}
+  {% if messages %}
+    <div class="alert alert-info mt-3">
+      {{ messages[0] }}
+    </div>
+  {% endif %}
+{% endwith %}
+
+</body>
+</html>
