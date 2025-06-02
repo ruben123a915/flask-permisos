@@ -271,8 +271,10 @@ def upload_excel():
                         val = None
                     values.append(val)
 
-                columns = ', '.join([f"`{col}`" for col in new_rows.columns if col != "PUERTAS"])
-                placeholders = ', '.join(['%s'] * len(new_rows.columns.drop("PUERTAS")))
+                # Changed here: include all columns (including PUERTAS)
+                columns = ', '.join([f"`{col}`" for col in new_rows.columns])
+                placeholders = ', '.join(['%s'] * len(new_rows.columns))
+
                 sql = f"INSERT INTO `PLATAFORMA-2` ({columns}) VALUES ({placeholders})"
                 cursor.execute(sql, tuple(values))
 
@@ -290,6 +292,7 @@ def upload_excel():
       <input type="submit" value="Upload">
     </form>
     '''
+
 
 if __name__ == "__main__":
     app.run(debug=True)
