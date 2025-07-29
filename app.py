@@ -252,7 +252,8 @@ def upload_excel():
             return "No file uploaded", 400
 
         try:
-            df = pd.read_excel(file)
+            import io
+            df = pd.read_excel(io.BytesIO(file.read()), engine='openpyxl')
             conn = get_db_connection()
             cursor = conn.cursor()
 
@@ -261,6 +262,7 @@ def upload_excel():
 
             new_rows = df[~df['FOLIO'].isin(existing_folios)]
 
+            batch_counter = 0
             for _, row in new_rows.iterrows():
                 values = []
                 for col in new_rows.columns:
@@ -271,12 +273,16 @@ def upload_excel():
                         val = None
                     values.append(val)
 
-                # Changed here: include all columns (including PUERTAS)
                 columns = ', '.join([f"`{col}`" for col in new_rows.columns])
                 placeholders = ', '.join(['%s'] * len(new_rows.columns))
 
                 sql = f"INSERT INTO `PLATAFORMA-2` ({columns}) VALUES ({placeholders})"
                 cursor.execute(sql, tuple(values))
+                batch_counter += 1
+
+                if batch_counter >= 100:
+                    conn.commit()
+                    batch_counter = 0
 
             conn.commit()
             cursor.close()
@@ -292,7 +298,6 @@ def upload_excel():
       <input type="submit" value="Upload">
     </form>
     '''
-
 
 if __name__ == "__main__":
     app.run(debug=True)
