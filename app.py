@@ -252,8 +252,7 @@ def upload_excel():
             return "No file uploaded", 400
 
         try:
-            import io
-            df = pd.read_excel(io.BytesIO(file.read()), engine='openpyxl')
+            df = pd.read_excel(file)
             conn = get_db_connection()
             cursor = conn.cursor()
 
@@ -262,29 +261,34 @@ def upload_excel():
 
             new_rows = df[~df['FOLIO'].isin(existing_folios)]
 
-            batch_counter = 0
-            for _, row in new_rows.iterrows():
+            batch_size = 100
+            columns = list(new_rows.columns)
+            columns_sql = ', '.join([f"`{col}`" for col in columns])
+            placeholders = ', '.join(['%s'] * len(columns))
+            sql = f"INSERT INTO `PLATAFORMA-2` ({columns_sql}) VALUES ({placeholders})"
+
+            values_batch = []
+            for idx, row in new_rows.iterrows():
                 values = []
-                for col in new_rows.columns:
+                for col in columns:
                     val = row[col]
                     if isinstance(val, pd.Timestamp):
                         val = val.strftime("%d/%m/%y")
                     elif pd.isna(val):
                         val = None
                     values.append(val)
+                values_batch.append(tuple(values))
 
-                columns = ', '.join([f"`{col}`" for col in new_rows.columns])
-                placeholders = ', '.join(['%s'] * len(new_rows.columns))
-
-                sql = f"INSERT INTO `PLATAFORMA-2` ({columns}) VALUES ({placeholders})"
-                cursor.execute(sql, tuple(values))
-                batch_counter += 1
-
-                if batch_counter >= 100:
+                if len(values_batch) >= batch_size:
+                    cursor.executemany(sql, values_batch)
                     conn.commit()
-                    batch_counter = 0
+                    values_batch = []
 
-            conn.commit()
+            # Insert remaining rows
+            if values_batch:
+                cursor.executemany(sql, values_batch)
+                conn.commit()
+
             cursor.close()
             conn.close()
             return redirect(url_for("dashboard"))
